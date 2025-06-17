@@ -21,7 +21,7 @@ contract PriceConsumerV3 {
     AggregatorV3Interface internal priceFeed;
 
     /**
-     * Network: Ethereum Mainnet
+     * Network: Testnet Sepolia
      * Aggregator: ETH/USD
      * Address: 0x... (Dirección del contrato de Chainlink para ETH/USD)
     */
