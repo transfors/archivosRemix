@@ -41,7 +41,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"PATRONES DE DISEÑO/ObtenerDatosOraculo.sol": "PriceConsumerV3"
+			"PATRONES DE DISEÑO/PatronObtenerDatosOraculo.sol": "PriceConsumerV3"
 		},
 		"evmVersion": "prague",
 		"libraries": {},
@@ -63,12 +63,12 @@
 				"dweb:/ipfs/QmTa99QHrJBn3SXDizquPBUiTxVCNKQrHgaWJhuds5Sce2"
 			]
 		},
-		"PATRONES DE DISEÑO/ObtenerDatosOraculo.sol": {
-			"keccak256": "0x693eb300735f03b1b582f574a6a2b8d90c9de86ec15995994cb0c6959d836437",
+		"PATRONES DE DISEÑO/PatronObtenerDatosOraculo.sol": {
+			"keccak256": "0x1f42ef4e2b89beacddecb464c0082fc6c6fb80b8f920d9e2ffb7e509e829548e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://ad13685054ef88ecf7c9d6527bf63440a07d1474d922f2fb69dac5d5e2ef4b8e",
-				"dweb:/ipfs/QmYnA693KhPWXpiVxRYdmeZNh5FHuQsxb2Jupei8zDTFad"
+				"bzz-raw://dd68124c9859bc364721157c219dea4052055ac5bc7abebc2cd01a2346a2448e",
+				"dweb:/ipfs/QmaSrHPfHZzNdVLg5zMV6kRSYCeToCf4MMR54wXhqJ8zGo"
 			]
 		}
 	},

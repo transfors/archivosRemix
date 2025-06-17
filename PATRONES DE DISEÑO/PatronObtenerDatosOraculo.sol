@@ -28,7 +28,8 @@ contract PriceConsumerV3 {
     // Declara la variable priceFeed que usaremos para interactuar con el oráculo.
     // En el constructor, inicializamos priceFeed con la dirección 
     // del contrato de Chainlink ETH/USD 
-    // (por ejemplo, en Ethereum Mainnet es: 0x694AA1769357215DE4FAC081bf1f309aDC325306).
+    // https://docs.chain.link/data-feeds/price-feeds/addresses?page=1&testnetPage=1&search=eth%2Fusd&testnetSearch=eth%2Fusd
+    // (por ejemplo, en Sepolia Testnet es: 0x694AA1769357215DE4FAC081bf1f309aDC325306).
     // Debes reemplazar 0x... con la dirección correcta según la red (Mainnet, Sepolia, etc.).
     constructor() {
         priceFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306); // Direccion del oraculo de Chainlink para ETH/USD
