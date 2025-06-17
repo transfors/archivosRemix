@@ -1,0 +1,70 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "string1",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "string2",
+						"type": "string"
+					}
+				],
+				"name": "compareStrings",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "pure",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"PATRONES DE DISEÑO/PatronComparacionStrings.sol": "StringComparison"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"PATRONES DE DISEÑO/PatronComparacionStrings.sol": {
+			"keccak256": "0xeee5b403df293ebc63f61186787a476f04d2b70e340c725b9e829573c33df0fa",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://439082c288957aab3dea15d726f4fbfce34bb58c59519a93606bbe08cb2bc1ca",
+				"dweb:/ipfs/QmfUYZHAbXvNFkoPrwjCd3z2cmn2h7dSaHZEqdG96THz6w"
+			]
+		}
+	},
+	"version": 1
+}
