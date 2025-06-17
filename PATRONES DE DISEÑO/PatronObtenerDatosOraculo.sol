@@ -18,6 +18,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 // (fuente externa de datos) que entrega el precio actual de ETH/USD
 contract PriceConsumerV3 {
 
+    // Declaro la variable del tipo de esa interface
     AggregatorV3Interface internal priceFeed;
 
     /**
