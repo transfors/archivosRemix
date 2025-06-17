@@ -7,6 +7,7 @@ contract SafeWithdrawal {
     mapping(address => uint) public balances;
     
     // Función para depositar Ether en el contrato
+    // no necesita valores de entrada
     function deposit() public payable {
         balances[msg.sender] += msg.value;
     }
