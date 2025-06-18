@@ -251,7 +251,7 @@
 			}
 		],
 		"devdoc": {
-			"details": "Contrato de intercambio descentralizado básico (similar a Uniswap V2) que permite a los usuarios agregar/remover liquidez e intercambiar tokens ERC-20. No depende directamente del protocolo Uniswap; implementa su propia lógica de pool.",
+			"details": "Contrato de intercambio descentralizado básico (similar a Uniswap V2) que permite a los usuarios agregar/remover liquidez e intercambiar tokens ERC-20, obtener precios y calcular cantidades a recibir. No depende directamente del protocolo Uniswap; implementa su propia lógica de pool.",
 			"errors": {
 				"ReentrancyGuardReentrantCall()": [
 					{
@@ -269,14 +269,14 @@
 						"amountBDesired": "La cantidad deseada de tokenB a depositar.",
 						"amountBMin": "La cantidad mínima de tokenB que debe aceptarse (protección contra slippage).",
 						"deadline": "El tiempo límite para que la transacción sea minada.",
-						"to": "La dirección a la que se enviarán los tokens de liquidez (LP tokens).",
+						"to": "La dirección a la que se le asignará la liquidez aportada.",
 						"tokenA": "La dirección del primer token a agregar.",
 						"tokenB": "La dirección del segundo token a agregar."
 					},
 					"returns": {
 						"amountA": "La cantidad real de tokenA transferida y utilizada.",
 						"amountB": "La cantidad real de tokenB transferida y utilizada.",
-						"liquidity": "La cantidad de tokens de liquidez (LP tokens) emitidos."
+						"liquidity": "La cantidad de liquidez registrada para el usuario."
 					}
 				},
 				"getAmountOut(uint256,uint256,uint256)": {
@@ -341,7 +341,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"TP3/A.sol": "SimpleSwap"
+			"TP3/SimpleSwap.sol": "SimpleSwap"
 		},
 		"evmVersion": "prague",
 		"libraries": {},
@@ -395,12 +395,12 @@
 				"dweb:/ipfs/QmPFKL2r9CBsMwmUqqdcFPfHZB2qcs9g1HDrPxzWSxomvy"
 			]
 		},
-		"TP3/A.sol": {
-			"keccak256": "0x45594f8e02b157f09d53b7388cac8d9370814b40c53f2c1c05d90231385b51ca",
+		"TP3/SimpleSwap.sol": {
+			"keccak256": "0x6c87c3cd47ba46a557e8df30565144ab2822fc7d446b4fcc377242af56d23be9",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://216140e37290e530f9cb48ce1813ba1b2f67ed6827d2f8c8ca900991becfb91c",
-				"dweb:/ipfs/QmQc8b7HdUrCJYmBfJDv1K6XhHMqyX839yVdJk9huXMwAC"
+				"bzz-raw://bca2558eabc794376f26d3852a8157097eed2d3787d0df9d7430da22e92bd402",
+				"dweb:/ipfs/QmPUmQVjJt5eHKxNmWBMYUiqWDtrNNQbZ3XPANinADd8V5"
 			]
 		}
 	},
