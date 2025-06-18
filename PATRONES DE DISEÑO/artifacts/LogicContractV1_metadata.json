@@ -39,7 +39,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"PATRONES DE DISEÑO/ActualizacionContratos.sol": "LogicContractV1"
+			"PATRONES DE DISEÑO/PatronActualizacionContratos.sol": "LogicContractV1"
 		},
 		"evmVersion": "prague",
 		"libraries": {},
@@ -53,12 +53,12 @@
 		"remappings": []
 	},
 	"sources": {
-		"PATRONES DE DISEÑO/ActualizacionContratos.sol": {
-			"keccak256": "0xb4a5689bfa6c0a8bb5dcbcf423cab4842c5dc4e62c43ed29d4cabe87cc3e9094",
+		"PATRONES DE DISEÑO/PatronActualizacionContratos.sol": {
+			"keccak256": "0x9cf16983697455cc024780368725a1b5db8bc9748c2120358e90cb8b57cbf834",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2124e8e0be8ab7cfafa6382c54047ebf4c3b44e66318c4831bafe3d97b90b65c",
-				"dweb:/ipfs/QmZPCQazDNfLFNixFCMtKsEKqbR4776Cd1D9S3n4PWGiAm"
+				"bzz-raw://bf5637dcc4fbba689609233d5e108c67303e38569430439e21a97d9f080bac7a",
+				"dweb:/ipfs/QmNcUtjhYPMsmFhD8nQYdUbwSuL2FxB56gCzKv4mmiYanZ"
 			]
 		}
 	},
