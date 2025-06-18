@@ -341,7 +341,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"TP3/SimpleSwap.sol": "SimpleSwap"
+			"TP3_ACTUAL/SimpleSwap.sol": "SimpleSwap"
 		},
 		"evmVersion": "prague",
 		"libraries": {},
@@ -395,12 +395,12 @@
 				"dweb:/ipfs/QmPFKL2r9CBsMwmUqqdcFPfHZB2qcs9g1HDrPxzWSxomvy"
 			]
 		},
-		"TP3/SimpleSwap.sol": {
-			"keccak256": "0x6c87c3cd47ba46a557e8df30565144ab2822fc7d446b4fcc377242af56d23be9",
+		"TP3_ACTUAL/SimpleSwap.sol": {
+			"keccak256": "0x5901db96e355283ec3ea9577b8197a4285a8f5c516df955e5db02eeeafe23928",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://bca2558eabc794376f26d3852a8157097eed2d3787d0df9d7430da22e92bd402",
-				"dweb:/ipfs/QmPUmQVjJt5eHKxNmWBMYUiqWDtrNNQbZ3XPANinADd8V5"
+				"bzz-raw://a16bf4924ef95b13022c3a89a1516f21238e8b51e722797f6425e9b40cc65176",
+				"dweb:/ipfs/QmStNcKcSpsgtNqffQGFPq68kvSswt2GCUtmqA3YNkEXXa"
 			]
 		}
 	},
