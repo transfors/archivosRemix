@@ -1,46 +1,108 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Importar contratos de OpenZeppelin para funcionalidades seguras
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // Interfaz estándar para tokens ERC-20
-import "@openzeppelin/contracts/utils/math/Math.sol"; // Utilidades matemáticas (e.g., Math.sqrt, Math.min)
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol"; // Protección contra ataques de reentrada
+// Import OpenZeppelin contracts for secure functionalities
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // Standard interface for ERC-20 tokens
+import "@openzeppelin/contracts/utils/math/Math.sol"; // Mathematical utilities (e.g., Math.sqrt, Math.min)
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol"; // Protection against reentrancy attacks
 
 /**
  * @title SimpleSwap
- * @dev Contrato de intercambio descentralizado básico (similar a Uniswap V2)
- * que permite a los usuarios agregar/remover liquidez e intercambiar tokens ERC-20,
- * obtener precios y calcular cantidades a recibir.
- * No depende directamente del protocolo Uniswap; implementa su propia lógica de pool.
+ * @dev A basic decentralized exchange contract (similar to Uniswap V2)
+ * that allows users to add/remove liquidity, swap ERC-20 tokens,
+ * get prices, and calculate amounts to receive.
+ * It does not directly depend on the Uniswap protocol; it implements its own pool logic.
  */
 contract SimpleSwap is ReentrancyGuard {
-    // Estructura para representar un pool de liquidez entre dos tokens
-    struct Pool {
-        uint256 reserveA; // Cantidad del primer token (token0) en el pool
-        uint256 reserveB; // Cantidad del segundo token (token1) en el pool
-        uint256 totalLiquidity; // Cantidad total de tokens de liquidez emitidos para este pool
-        mapping(address => uint256) liquidityProvided; // Cantidad de liquidez proporcionada por cada usuario
-    }
-
-    // Mapeo de un hash de par de tokens a su Pool correspondiente
-    // El hash de par asegura que cada par de tokens tenga un único pool,
-    // independientemente del orden en que se proporcionen (TokenA, TokenB o TokenB, TokenA).
-    mapping(bytes32 => Pool) public pools;
+    // --- Events ---
 
     /**
-     * @dev Calcula un hash único para un par de tokens, asegurando un orden canónico.
-     * Siempre ordena las direcciones de los tokens antes de hashear para que
-     * (tokenA, tokenB) y (tokenB, tokenA) resulten en el mismo hash.
-     * @param tokenA La dirección del primer token.
-     * @param tokenB La dirección del segundo token.
-     * @return bytes32 El hash keccak256 de las direcciones de los tokens ordenadas.
+     * @dev Emitted when liquidity is successfully added to a pool.
+     * @param provider The address of the liquidity provider.
+     * @param tokenA The address of the first token in the pair.
+     * @param tokenB The address of the second token in the pair.
+     * @param amountA The actual amount of tokenA transferred to the pool.
+     * @param amountB The actual amount of tokenB transferred to the pool.
+     * @param liquidityMinted The amount of internal liquidity tokens minted for the provider.
+     * @param timestamp The timestamp when the liquidity was added.
+     */
+    event LiquidityAdded(
+        address indexed provider,
+        address indexed tokenA,
+        address indexed tokenB,
+        uint256 amountA,
+        uint256 amountB,
+        uint256 liquidityMinted,
+        uint256 timestamp
+    );
+
+    /**
+     * @dev Emitted when liquidity is successfully removed from a pool.
+     * @param provider The address of the liquidity provider who removed liquidity.
+     * @param amountA The amount of tokenA withdrawn from the pool.
+     * @param amountB The amount of tokenB withdrawn from the pool.
+     */
+    event LiquidityRemoved(address indexed provider, uint256 amountA, uint256 amountB);
+
+    /**
+     * @dev Emitted when tokens are successfully swapped in a pool.
+     * @param swapper The address of the user who performed the swap.
+     * @param tokenIn The address of the token that was sent into the pool.
+     * @param tokenOut The address of the token that was received from the pool.
+     * @param amountIn The amount of `tokenIn` that was swapped.
+     * @param amountOut The amount of `tokenOut` that was received.
+     * @param timestamp The timestamp when the swap occurred.
+     */
+    event TokensSwapped(
+        address indexed swapper,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 timestamp
+    );
+
+    // --- Structs ---
+
+    /**
+     * @dev Structure to represent a liquidity pool between two tokens.
+     * @param reserveA The amount of the first token (token0) in the pool.
+     * @param reserveB The amount of the second token (token1) in the pool.
+     * @param totalLiquidity The total amount of internal liquidity tokens issued for this pool.
+     * @param liquidityProvided A mapping from user address to the amount of liquidity tokens they hold.
+     */
+    struct Pool {
+        uint256 reserveA; // Amount of the first token (token0) in the pool
+        uint256 reserveB; // Amount of the second token (token1) in the pool
+        uint256 totalLiquidity; // Total amount of liquidity tokens issued for this pool
+        mapping(address => uint256) liquidityProvided; // Amount of liquidity provided by each user
+    }
+
+    // --- State Variables ---
+
+    /**
+     * @dev Mapping from a unique pair hash (bytes32) to its corresponding Pool struct.
+     * The pair hash ensures that each token pair has a single unique pool,
+     * regardless of the order in which tokens are provided (TokenA, TokenB or TokenB, TokenA).
+     */
+    mapping(bytes32 => Pool) internal pools;
+
+    // --- Internal Helper Functions ---
+
+    /**
+     * @dev Calculates a unique hash for a pair of tokens, ensuring a canonical order.
+     * Always sorts the token addresses before hashing so that
+     * (tokenA, tokenB) and (tokenB, tokenA) result in the same hash.
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @return bytes32 The keccak256 hash of the sorted token addresses.
      */
     function _getPairHash(address tokenA, address tokenB)
         internal
         pure
         returns (bytes32)
     {
-        // Asegurarse de que tokenA sea siempre el de menor dirección para un orden consistente
+        // Ensure that tokenA is always the smaller address for consistent ordering
         return
             tokenA < tokenB
                 ? keccak256(abi.encodePacked(tokenA, tokenB))
@@ -48,109 +110,157 @@ contract SimpleSwap is ReentrancyGuard {
     }
 
     /**
-     * @dev Ordena dos direcciones de tokens para establecer un orden canónico (token0, token1).
-     * `token0` será la dirección con el valor hexadecimal más bajo.
-     * @param tokenA La dirección del primer token.
-     * @param tokenB La dirección del segundo token.
-     * @return address La dirección del token con el valor más bajo (token0).
-     * @return address La dirección del token con el valor más alto (token1).
+     * @dev Sorts two token addresses to establish a canonical order (token0, token1).
+     * `token0` will be the address with the lower hexadecimal value.
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @return address The address of the token with the lower value (token0).
+     * @return address The address of the token with the higher value (token1).
      */
     function _sortTokens(address tokenA, address tokenB)
         internal
         pure
         returns (address, address)
     {
-        require(tokenA != tokenB, "SimpleSwap: Tokens deben ser diferentes");
+        // Revert if token addresses are identical, as a pool requires two distinct tokens.
+        require(tokenA != tokenB, "SimpleSwap: Tokens must be different");
+        // Return tokens in ascending order of their addresses.
         return tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
     }
 
     /**
-     * @dev Helper interno para obtener las reservas del pool en el orden correcto
-     * (currentReserve0, currentReserve1) basado en el tokenA y token0.
-     * @param tokenA La dirección del token A proporcionado por el usuario.
-     * @param token0 La dirección del token 0 (el de menor valor) del par.
-     * @param pool La referencia al storage del Pool.
-     * @return currentReserve0 La reserva del token que corresponde a token0.
-     * @return currentReserve1 La reserva del token que corresponde a token1.
+     * @dev Internal helper to get the pool reserves in the correct order
+     * (currentReserve0, currentReserve1) based on `tokenA` and `token0`.
+     * This function ensures that the reserves are retrieved consistently, regardless
+     * of how `tokenA` and `tokenB` were originally passed.
+     * @param tokenA The address of the first token provided by the user.
+     * @param token0 The address of token0 (the lower value address) of the pair.
+     * @param pool The storage reference to the Pool struct.
+     * @return currentReserve0 The reserve of the token that corresponds to token0.
+     * @return currentReserve1 The reserve of the token that corresponds to token1.
      */
-    function _getOrderedReserves(address tokenA, address token0, Pool storage pool)
-        internal
-        view
-        returns (uint256 currentReserve0, uint256 currentReserve1)
-    {
+    function _getOrderedReserves(
+        address tokenA,
+        address token0,
+        Pool storage pool
+    ) internal view returns (uint256 currentReserve0, uint256 currentReserve1) {
+        // If the user's tokenA is the canonically smaller token (token0),
+        // then pool.reserveA corresponds to token0's reserve and pool.reserveB to token1's.
         if (tokenA == token0) {
             currentReserve0 = pool.reserveA;
             currentReserve1 = pool.reserveB;
         } else {
+            // Otherwise, pool.reserveB corresponds to token0's reserve and pool.reserveA to token1's.
             currentReserve0 = pool.reserveB;
             currentReserve1 = pool.reserveA;
         }
     }
 
     /**
-     * @dev Helper interno para calcular las cantidades óptimas de tokens a agregar
-     * y la cantidad de liquidez a emitir.
-     * Nota: Ahora toma `tokenA`, `token0` y el `pool` directamente para reducir
-     * la profundidad de la pila en la función `addLiquidity`.
-     * @param tokenA La dirección del token A.
-     * @param token0 La dirección del token 0.
-     * @param amountADesired Cantidad deseada de tokenA.
-     * @param amountBDesired Cantidad deseada de tokenB.
-     * @param amountAMin Cantidad mínima de tokenA.
-     * @param amountBMin Cantidad mínima de tokenB.
-     * @param pool La referencia al storage del Pool.
-     * @return amountA La cantidad real de tokenA a usar.
-     * @return amountB La cantidad real de tokenB a usar.
-     * @return liquidity La cantidad de liquidez a emitir.
+     * @dev Internal helper to calculate the optimal amounts of tokens to add
+     * and the amount of liquidity to mint.
+     * This function handles both initial liquidity provision and adding to existing pools,
+     * ensuring the correct ratio is maintained for existing pools.
+     * @param tokenA The address of token A.
+     * @param token0 The address of token 0 (the canonically smaller token).
+     * @param amountADesired The desired amount of tokenA to deposit.
+     * @param amountBDesired The desired amount of tokenB to deposit.
+     * @param amountAMin The minimum amount of tokenA that must be accepted (slippage protection).
+     * @param amountBMin The minimum amount of tokenB that must be accepted (slippage protection).
+     * @param pool The storage reference to the Pool struct.
+     * @return amountA The actual amount of tokenA to be used.
+     * @return amountB The actual amount of tokenB to be used.
+     * @return liquidity The amount of liquidity tokens to be minted.
      */
     function _calculateAddLiquidityAmountsAndLiquidity(
-        address tokenA, // Nueva variable: pasa tokenA directamente
-        address token0, // Nueva variable: pasa token0 directamente
+        address tokenA,
+        address token0,
         uint256 amountADesired,
         uint256 amountBDesired,
         uint256 amountAMin,
         uint256 amountBMin,
-        Pool storage pool // Pasa la referencia al storage del pool
-    ) internal view returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        // Obtener las reservas actuales dentro de esta función helper
-        (uint256 currentReserve0, uint256 currentReserve1) = _getOrderedReserves(tokenA, token0, pool);
+        Pool storage pool
+    )
+        internal
+        view
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        )
+    {
+        // Retrieve current reserves, ordered canonically based on token0.
+        (
+            uint256 currentReserve0,
+            uint256 currentReserve1
+        ) = _getOrderedReserves(tokenA, token0, pool);
 
-        if (pool.totalLiquidity == 0) { // Accede a pool.totalLiquidity directamente
-            // Primera liquidez
+        // Check if this is the first liquidity addition to the pool.
+        if (pool.totalLiquidity == 0) {
+            // For the first liquidity, use the desired amounts directly.
             amountA = amountADesired;
             amountB = amountBDesired;
-            require(amountA > 0 && amountB > 0, "SimpleSwap: Cantidades iniciales deben ser > 0");
+            // Both initial amounts must be positive to create a valid pool.
+            require(
+                amountA > 0 && amountB > 0,
+                "SimpleSwap: Initial amounts must be > 0"
+            );
+            // Initial liquidity is calculated as the geometric mean of the deposited amounts.
             liquidity = Math.sqrt(amountA * amountB);
         } else {
-            // Liquidez adicional
-            uint256 amountBOptimal = (amountADesired * currentReserve1) / currentReserve0;
+            // For additional liquidity, calculate optimal amounts to maintain the existing ratio.
+            // Calculate the optimal amount of tokenB required for the desired amount of tokenA,
+            // based on the current pool ratio (reserve1 / reserve0).
+            uint256 amountBOptimal = (amountADesired * currentReserve1) /
+                currentReserve0;
 
+            // If the calculated optimal amount of tokenB is less than or equal to the desired tokenB,
+            // it means we can provide the full desired amount of tokenA.
             if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, "SimpleSwap: Slippage excesivo en Token B");
+                // Check against minimum acceptable amountB (slippage protection).
+                require(
+                    amountBOptimal >= amountBMin,
+                    "SimpleSwap: Excessive slippage on Token B"
+                );
                 amountA = amountADesired;
                 amountB = amountBOptimal;
             } else {
-                uint256 amountAOptimal = (amountBDesired * currentReserve0) / currentReserve1;
-                require(amountAOptimal >= amountAMin, "SimpleSwap: Slippage excesivo en Token A");
+                // If the desired tokenB is limiting, calculate the optimal amount of tokenA for it.
+                // Calculate the optimal amount of tokenA required for the desired amount of tokenB,
+                // based on the current pool ratio (reserve0 / reserve1).
+                uint256 amountAOptimal = (amountBDesired * currentReserve0) /
+                    currentReserve1;
+                // Check against minimum acceptable amountA (slippage protection).
+                require(
+                    amountAOptimal >= amountAMin,
+                    "SimpleSwap: Excessive slippage on Token A"
+                );
                 amountA = amountAOptimal;
                 amountB = amountBDesired;
             }
 
+            // Calculate the amount of liquidity tokens to mint.
+            // This is proportional to the smallest ratio of (added token / current reserve)
+            // multiplied by the total existing liquidity. This ensures the provider
+            // gets a share of the pool proportionate to their contribution.
             liquidity = Math.min(
-                (amountA * pool.totalLiquidity) / currentReserve0, // Accede a pool.totalLiquidity directamente
+                (amountA * pool.totalLiquidity) / currentReserve0,
                 (amountB * pool.totalLiquidity) / currentReserve1
             );
         }
-        require(liquidity > 0, "SimpleSwap: Liquidez emitida debe ser > 0");
+        // Ensure that a non-zero amount of liquidity is minted.
+        require(liquidity > 0, "SimpleSwap: Liquidity minted must be > 0");
     }
 
     /**
-     * @dev Helper interno para actualizar las reservas del pool después de agregar liquidez.
-     * @param tokenA La dirección del token A.
-     * @param token0 La dirección del token 0.
-     * @param pool La referencia al storage del Pool.
-     * @param amountA La cantidad efectiva de tokenA agregada.
-     * @param amountB La cantidad efectiva de tokenB agregada.
+     * @dev Internal helper to update the pool reserves after adding liquidity.
+     * This function ensures that `reserveA` and `reserveB` are updated correctly
+     * based on the canonical order of `token0` and `token1`.
+     * @param tokenA The address of token A as provided by the user.
+     * @param token0 The address of token 0 (the canonically smaller token).
+     * @param pool The storage reference to the Pool struct.
+     * @param amountA The effective amount of tokenA added.
+     * @param amountB The effective amount of tokenB added.
      */
     function _updateAddLiquidityPoolReserves(
         address tokenA,
@@ -159,133 +269,133 @@ contract SimpleSwap is ReentrancyGuard {
         uint256 amountA,
         uint256 amountB
     ) internal {
+        // If the user's tokenA is the canonically smaller token (token0),
+        // then add amountA to pool.reserveA and amountB to pool.reserveB.
         if (tokenA == token0) {
             pool.reserveA += amountA;
             pool.reserveB += amountB;
         } else {
-            pool.reserveA += amountB; // amountB de TokenA (token1)
-            pool.reserveB += amountA; // amountA de TokenB (token0)
+            // Otherwise, amountA corresponds to token1 and amountB to token0.
+            // So, add amountB to pool.reserveA (which holds token0's reserve)
+            // and amountA to pool.reserveB (which holds token1's reserve).
+            pool.reserveA += amountB;
+            pool.reserveB += amountA;
         }
     }
 
-  // --- 1. AGREGAR LIQUIDEZ ---
-/**
- * @dev Permite a los usuarios agregar liquidez a un pool de tokens ERC-20.
- * Si es la primera liquidez, se inicializa el pool. De lo contrario,
- * se calculan las cantidades óptimas para mantener la proporción existente.
- * @param tokenA La dirección del primer token a agregar.
- * @param tokenB La dirección del segundo token a agregar.
- * @param amountADesired La cantidad deseada de tokenA a depositar.
- * @param amountBDesired La cantidad deseada de tokenB a depositar.
- * @param amountAMin La cantidad mínima de tokenA que debe aceptarse (protección contra slippage).
- * @param amountBMin La cantidad mínima de tokenB que debe aceptarse (protección contra slippage).
- * @param to La dirección a la que se le asignará la liquidez aportada.
- * @param deadline El tiempo límite para que la transacción sea minada.
- * @return amountA La cantidad real de tokenA transferida y utilizada.
- * @return amountB La cantidad real de tokenB transferida y utilizada.
- * @return liquidity La cantidad de liquidez registrada para el usuario.
- */
-
-// ✔ Cumple con la interfaz esperada.
-// ✔ Marca como external y nonReentrant para seguridad.
-// ✔ Devuelve amountA, amountB y liquidity.
-
-// Objetivo:
-// Permitir a los usuarios aportar tokens a un pool de liquidez y registrar internamente 
-// cuanto han aportado para que luego puedan retirarlo proporcionalmente.
-function addLiquidity(
-    address tokenA,
-    address tokenB,
-    uint256 amountADesired,
-    uint256 amountBDesired,
-    uint256 amountAMin,
-    uint256 amountBMin,
-    address to,
-    uint256 deadline
-)
-    external
-    nonReentrant // Previene ataques de reentrada
-    returns (
-        uint256 amountA,
-        uint256 amountB,
-        uint256 liquidity
-    )
-{   // Verifica que la transacción no haya expirado.
-    // Evita enviar liquidez a una dirección nula (evita perdidas).
-    require(block.timestamp <= deadline, "SimpleSwap: Transaccion expirada");
-    require(to != address(0), "SimpleSwap: Direccion 'to' invalida");
-
-    // Obtener el orden canónico de los tokens y el hash del par
-    // Se ordenan los tokens para mantener un orden canónico (A < B).
-    // Se genera un pairHash unico para identificar el pool.
-    // Se accede al pool correspondiente en el mapping pools.
-    (address token0, ) = _sortTokens(tokenA, tokenB);
-    bytes32 pairHash = _getPairHash(tokenA, tokenB);
-    Pool storage pool = pools[pairHash]; // Referencia al storage del pool
-
-    // Calcular montos optimos de aportes y liquidez
-    // Se calculan las cantidades optimas que deben depositarse manteniendo el ratio del pool.
-    // También se calcula cuanta liquidez debe asignarse al usuario.
-    // Esta función también puede manejar el caso donde el pool esta vacio (primer depósito).
-    (amountA, amountB, liquidity) = _calculateAddLiquidityAmountsAndLiquidity(
-        tokenA,
-        token0,
-        amountADesired,
-        amountBDesired,
-        amountAMin,
-        amountBMin,
-        pool
-    );
-
-    // Transferir los tokens del remitente al contrato
-    // Se transfieren los tokens desde el usuario al contrato de SimpleSwap.
-    // Usa transferFrom, por lo que el usuario debe haber aprobado previamente.
-    IERC20(tokenA).transferFrom(msg.sender, address(this), amountA);
-    IERC20(tokenB).transferFrom(msg.sender, address(this), amountB);
-
-    // Actualizar reservas del pool
-    // Se actualizan las reservas del pool usando una funcion helper.
-    // Asegura que las reservas reflejen los nuevos depositos, 
-    // respetando el orden token0/token1.
-    _updateAddLiquidityPoolReserves(tokenA, token0, pool, amountA, amountB);
-
-    // Registrar la liquidez del usuario en el sistema interno
-    // Se actualiza la liquidez total del pool.
-    // Se registra la liquidez aportada por el usuario (to) en el 
-    // sistema de contabilidad interna.
-    pool.totalLiquidity += liquidity;
-    pool.liquidityProvided[to] += liquidity;
-
-    // Devuelve:
-    // amountA: tokens A realmente depositados,
-    // amountB: tokens B realmente depositados,
-    // liquidity: cuanta liquidez fue registrada para el usuario.
-    return (amountA, amountB, liquidity);
-
-    // Resumen
-    // Aspecto	Cumple
-    // Valida condiciones de seguridad (deadline, address)	✔
-    // Calcula proporciones optimas de tokens	✔
-    // Transfiere tokens del usuario al contrato	✔
-    // Actualiza reservas del pool	✔
-    // Registra la liquidez del usuario	✔ (sistema interno)
-    // Devuelve resultados esperados	✔
-}
-
-
-    // --- 2. REMOVER LIQUIDEZ ---
+    // --- 1. ADD LIQUIDITY ---
     /**
-     * @dev Permite a los usuarios retirar liquidez de un pool quemando sus tokens de liquidez (LP tokens).
-     * Los usuarios reciben una cantidad proporcional de los tokens subyacentes (tokenA y tokenB).
-     * @param tokenA La dirección del primer token en el par.
-     * @param tokenB La dirección del segundo token en el par.
-     * @param liquidity La cantidad de tokens de liquidez (LP tokens) a quemar.
-     * @param amountAMin La cantidad mínima de tokenA que debe recibirse (protección contra slippage).
-     * @param amountBMin La cantidad mínima de tokenB que debe recibirse (protección contra slippage).
-     * @param to La dirección a la que se enviarán los tokens A y B retirados.
-     * @param deadline El tiempo límite para que la transacción sea minada.
-     * @return amountA La cantidad real de tokenA retirada.
-     * @return amountB La cantidad real de tokenB retirada.
+     * @dev Allows users to add liquidity to an ERC-20 token pair pool.
+     * If it's the first liquidity provision, the pool is initialized. Otherwise,
+     * optimal amounts are calculated to maintain the existing ratio.
+     * @param tokenA The address of the first token to add.
+     * @param tokenB The address of the second token to add.
+     * @param amountADesired The desired amount of tokenA to deposit.
+     * @param amountBDesired The desired amount of tokenB to deposit.
+     * @param amountAMin The minimum amount of tokenA that must be accepted (slippage protection).
+     * @param amountBMin The minimum amount of tokenB that must be accepted (slippage protection).
+     * @param to The address to which the minted liquidity tokens will be assigned.
+     * @param deadline The timestamp by which the transaction must be mined.
+     * @return amountA The actual amount of tokenA transferred and used.
+     * @return amountB The actual amount of tokenB transferred and used.
+     * @return liquidity The amount of internal liquidity tokens minted for the user.
+     */
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        nonReentrant // Prevents reentrancy attacks, ensuring state changes are atomic
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        )
+    {
+        // Validate that the transaction has not expired.
+        // This prevents delayed transactions from executing after market conditions change.
+        require(
+            block.timestamp <= deadline,
+            "SimpleSwap: Transaction expired"
+        );
+        // Validate that the 'to' address is not null to prevent funds from being sent to address(0).
+        require(to != address(0), "SimpleSwap: Invalid 'to' address");
+
+        // Get the canonical order of tokens and the pair hash.
+        // Tokens are sorted to maintain a canonical order (token0 < token1).
+        // A unique pairHash is generated to identify the pool.
+        // The corresponding pool in the 'pools' mapping is accessed.
+        (address token0, ) = _sortTokens(tokenA, tokenB);
+        bytes32 pairHash = _getPairHash(tokenA, tokenB);
+        // Get a storage reference to the pool for direct modification.
+        Pool storage pool = pools[pairHash];
+
+        // Calculate optimal contribution amounts and liquidity to mint.
+        // Optimal amounts are calculated to maintain the pool's ratio,
+        // and the amount of liquidity to be assigned to the user is determined.
+        // This helper also handles the case where the pool is empty (first deposit).
+        (amountA, amountB, liquidity) = _calculateAddLiquidityAmountsAndLiquidity(
+            tokenA,
+            token0,
+            amountADesired,
+            amountBDesired,
+            amountAMin,
+            amountBMin,
+            pool
+        );
+
+        // Transfer tokens from the sender to the SimpleSwap contract.
+        // `transferFrom` is used, meaning the user must have previously approved
+        // this contract to spend the specified amounts on their behalf.
+        IERC20(tokenA).transferFrom(msg.sender, address(this), amountA);
+        IERC20(tokenB).transferFrom(msg.sender, address(this), amountB);
+
+        // Update pool reserves.
+        // Reserves are updated using a helper function to ensure they reflect new deposits,
+        // respecting the canonical token0/token1 order.
+        _updateAddLiquidityPoolReserves(tokenA, token0, pool, amountA, amountB);
+
+        // Record the user's liquidity in the internal accounting system.
+        // `totalLiquidity` of the pool is updated.
+        // The `liquidityProvided` by the user (`to` address) is registered,
+        // representing their share of the pool.
+        pool.totalLiquidity += liquidity;
+        pool.liquidityProvided[to] += liquidity;
+
+        // Emit an event to log the successful addition of liquidity.
+        emit LiquidityAdded(
+            msg.sender,
+            tokenA,
+            tokenB,
+            amountA,
+            amountB,
+            liquidity,
+            block.timestamp
+        );
+
+        // Return the actual amounts of tokens deposited and the liquidity minted.
+        return (amountA, amountB, liquidity);
+    }
+
+    // --- 2. REMOVE LIQUIDITY ---
+    /**
+     * @dev Allows users to withdraw liquidity from a token pool by burning their liquidity tokens (LP tokens).
+     * Users receive a proportional amount of the underlying tokens (tokenA and tokenB) based on their burned liquidity.
+     * @param tokenA The address of the first token in the pair.
+     * @param tokenB The address of the second token in the pair.
+     * @param liquidity The amount of liquidity tokens (LP tokens) to burn.
+     * @param amountAMin The minimum amount of tokenA that must be received (slippage protection).
+     * @param amountBMin The minimum amount of tokenB that must be received (slippage protection).
+     * @param to The address to which the withdrawn tokenA and tokenB will be sent.
+     * @param deadline The timestamp by which the transaction must be mined.
+     * @return amountA The actual amount of tokenA withdrawn.
+     * @return amountB The actual amount of tokenB withdrawn.
      */
     function removeLiquidity(
         address tokenA,
@@ -296,67 +406,99 @@ function addLiquidity(
         address to,
         uint256 deadline
     ) external nonReentrant returns (uint256 amountA, uint256 amountB) {
-        require(block.timestamp <= deadline, "SimpleSwap: Transaccion expirada");
-        require(to != address(0), "SimpleSwap: Direccion 'to' invalida");
-        require(liquidity > 0, "SimpleSwap: Liquidez a remover debe ser > 0");
+        // Validate that the transaction has not expired.
+        require(
+            block.timestamp <= deadline,
+            "SimpleSwap: Transaction expired"
+        );
+        // Validate that the 'to' address is not null.
+        require(to != address(0), "SimpleSwap: Invalid 'to' address");
+        // Ensure that a positive amount of liquidity is being removed.
+        require(liquidity > 0, "SimpleSwap: Liquidity to remove must be > 0");
 
-        // Obtener el orden canónico de los tokens y el hash del par
+        // Get the canonical order of tokens and the pair hash to identify the pool.
         (address token0, ) = _sortTokens(tokenA, tokenB);
         bytes32 pairHash = _getPairHash(tokenA, tokenB);
-        Pool storage pool = pools[pairHash]; // Referencia al storage del pool
+        // Get a storage reference to the pool.
+        Pool storage pool = pools[pairHash];
 
+        // Check if the sender has sufficient liquidity to remove.
         require(
             pool.liquidityProvided[msg.sender] >= liquidity,
-            "SimpleSwap: Liquidez insuficiente del usuario"
+            "SimpleSwap: Insufficient user liquidity"
         );
-        require(pool.totalLiquidity > 0, "SimpleSwap: Pool de liquidez vacio");
+        // Ensure the pool is not empty before attempting to remove liquidity.
+        require(pool.totalLiquidity > 0, "SimpleSwap: Liquidity pool is empty");
 
-        // Obtener las reservas actuales del pool, asegurando el orden correcto
-        uint256 currentReserve0 = tokenA == token0 ? pool.reserveA : pool.reserveB;
-        uint256 currentReserve1 = tokenA == token0 ? pool.reserveB : pool.reserveA;
+        // Get the current reserves of the pool, ensuring they are ordered correctly
+        // based on the canonical token0/token1 addresses.
+        uint256 currentReserve0 = tokenA == token0
+            ? pool.reserveA
+            : pool.reserveB;
+        uint256 currentReserve1 = tokenA == token0
+            ? pool.reserveB
+            : pool.reserveA;
 
-        // Calcular la cantidad de tokens A y B a retirar proporcionalmente a la liquidez quemada
+        // Calculate the amounts of tokenA and tokenB to withdraw proportionally
+        // to the amount of liquidity being burned.
+        // amountA = (liquidity to burn * current reserve of token0) / total pool liquidity
+        // amountB = (liquidity to burn * current reserve of token1) / total pool liquidity
         amountA = (liquidity * currentReserve0) / pool.totalLiquidity;
         amountB = (liquidity * currentReserve1) / pool.totalLiquidity;
 
-        require(amountA >= amountAMin, "SimpleSwap: Slippage excesivo en Token A al remover");
-        require(amountB >= amountBMin, "SimpleSwap: Slippage excesivo en Token B al remover");
+        // Apply slippage protection: ensure the calculated amounts are at least the minimum specified.
+        require(
+            amountA >= amountAMin,
+            "SimpleSwap: Excessive slippage on Token A when removing"
+        );
+        require(
+            amountB >= amountBMin,
+            "SimpleSwap: Excessive slippage on Token B when removing"
+        );
 
-        // Actualizar la liquidez total y la liquidez provista por el usuario
+        // Update the total liquidity of the pool and the liquidity provided by the user.
         pool.totalLiquidity -= liquidity;
         pool.liquidityProvided[msg.sender] -= liquidity;
 
-        // Actualizar las reservas del pool según el orden canónico
+        // Update the pool reserves based on the canonical order.
+        // If tokenA was token0, subtract `amountA` from `reserveA` and `amountB` from `reserveB`.
+        // Otherwise, subtract `amountB` from `reserveA` (which holds token0) and `amountA` from `reserveB` (which holds token1).
         if (tokenA == token0) {
             pool.reserveA -= amountA;
             pool.reserveB -= amountB;
         } else {
-            pool.reserveA -= amountB; // amountB de TokenA (token1)
-            pool.reserveB -= amountA; // amountA de TokenB (token0)
+            pool.reserveA -= amountB; // This is the amount for token0 (pool.reserveA)
+            pool.reserveB -= amountA; // This is the amount for token1 (pool.reserveB)
         }
 
-        // Transferir los tokens retirados al destinatario
+        // Transfer the withdrawn tokens to the recipient.
         IERC20(tokenA).transfer(to, amountA);
         IERC20(tokenB).transfer(to, amountB);
 
+        // Emit an event to log the successful removal of liquidity.
+        emit LiquidityRemoved(msg.sender, amountA, amountB);
+
+        // Return the actual amounts of tokens withdrawn.
         return (amountA, amountB);
     }
 
     /**
-     * @dev Helper interno para obtener las reservas de entrada y salida para un swap,
-     * considerando el orden canónico de los tokens en el pool.
-     * @param _tokenIn La dirección del token de entrada.
-     * @param _tokenOut La dirección del token de salida.
-     * @param _pool La referencia al storage del Pool.
-     * @return reserveIn La reserva del token de entrada en el pool.
-     * @return reserveOut La reserva del token de salida en el pool.
+     * @dev Internal helper to get the input and output reserves for a swap,
+     * considering the canonical order of tokens in the pool.
+     * This ensures that `reserveIn` always refers to the reserve of `_tokenIn`
+     * and `reserveOut` to `_tokenOut`, regardless of their canonical position.
+     * @param _tokenIn The address of the input token.
+     * @param _tokenOut The address of the output token.
+     * @param _pool The storage reference to the Pool struct.
+     * @return reserveIn The reserve of the input token in the pool.
+     * @return reserveOut The reserve of the output token in the pool.
      */
     function _getReservesForSwap(
         address _tokenIn,
         address _tokenOut,
         Pool storage _pool
     ) internal view returns (uint256 reserveIn, uint256 reserveOut) {
-        // Determinamos el token0 y token1 del par para acceder correctamente a las reservas del pool
+        // Determine the canonical token0 and token1 of the pair to correctly access pool reserves.
         address token0;
         address token1;
         if (_tokenIn < _tokenOut) {
@@ -367,23 +509,25 @@ function addLiquidity(
             token1 = _tokenIn;
         }
 
-        // Asignamos reserveIn y reserveOut según si el tokenIn es token0 o token1 del par
+        // Assign reserveIn and reserveOut based on whether _tokenIn is token0 or token1 of the pair.
         if (_tokenIn == token0) {
-            reserveIn = _pool.reserveA;
-            reserveOut = _pool.reserveB;
+            reserveIn = _pool.reserveA; // If _tokenIn is token0, its reserve is pool.reserveA
+            reserveOut = _pool.reserveB; // And _tokenOut's reserve is pool.reserveB
         } else {
-            reserveIn = _pool.reserveB;
-            reserveOut = _pool.reserveA;
+            reserveIn = _pool.reserveB; // If _tokenIn is token1, its reserve is pool.reserveB
+            reserveOut = _pool.reserveA; // And _tokenOut's reserve is pool.reserveA
         }
     }
 
     /**
-     * @dev Helper interno para actualizar las reservas del pool después de un swap.
-     * @param _tokenIn La dirección del token de entrada.
-     * @param _tokenOut La dirección del token de salida.
-     * @param _pool La referencia al storage del Pool.
-     * @param _amountIn La cantidad de token que entró al pool.
-     * @param _amountOut La cantidad de token que salió del pool.
+     * @dev Internal helper to update the pool reserves after a swap.
+     * This function adjusts `reserveA` and `reserveB` based on the amounts swapped,
+     * respecting the canonical ordering of tokens within the pool.
+     * @param _tokenIn The address of the input token.
+     * @param _tokenOut The address of the output token.
+     * @param _pool The storage reference to the Pool struct.
+     * @param _amountIn The amount of the input token that entered the pool.
+     * @param _amountOut The amount of the output token that left the pool.
      */
     function _updatePoolReserves(
         address _tokenIn,
@@ -392,7 +536,7 @@ function addLiquidity(
         uint256 _amountIn,
         uint256 _amountOut
     ) internal {
-        // Determinamos el token0 y token1 del par para actualizar correctamente las reservas del pool
+        // Determine the canonical token0 and token1 of the pair to correctly update pool reserves.
         address token0;
         address token1;
         if (_tokenIn < _tokenOut) {
@@ -403,29 +547,31 @@ function addLiquidity(
             token1 = _tokenIn;
         }
 
-        // Actualizamos reserveA y reserveB del pool.
-        // Si _tokenIn es token0, sumamos a reserveA y restamos de reserveB.
-        // Si _tokenIn es token1, sumamos a reserveB y restamos de reserveA.
+        // Update reserveA and reserveB of the pool.
+        // If _tokenIn is token0, add _amountIn to reserveA (token0's reserve)
+        // and subtract _amountOut from reserveB (token1's reserve).
         if (_tokenIn == token0) {
             _pool.reserveA += _amountIn;
             _pool.reserveB -= _amountOut;
         } else {
+            // If _tokenIn is token1, add _amountIn to reserveB (token1's reserve)
+            // and subtract _amountOut from reserveA (token0's reserve).
             _pool.reserveB += _amountIn;
             _pool.reserveA -= _amountOut;
         }
     }
 
-    // --- 3. INTERCAMBIAR TOKENS (SWAP EXACT) ---
+    // --- 3. SWAP EXACT TOKENS FOR TOKENS ---
     /**
-     * @dev Permite a los usuarios intercambiar una cantidad exacta de un token
-     * (amountIn) por otro token, con una ruta de un solo salto.
-     * El `path` debe contener exactamente dos direcciones: [tokenEntrada, tokenSalida].
-     * @param amountIn La cantidad exacta del token de entrada a intercambiar.
-     * @param amountOutMin La cantidad mínima del token de salida que debe recibirse (protección contra slippage).
-     * @param path Un array con las direcciones de los tokens en la ruta de intercambio (ej: [tokenA, tokenB]).
-     * @param to La dirección a la que se enviará el token de salida.
-     * @param deadline El tiempo límite para que la transacción sea minada.
-     * @return amounts Un array con la cantidad de entrada (amounts[0]) y la cantidad de salida (amounts[1]).
+     * @dev Allows users to swap an exact amount of an input token (`amountIn`)
+     * for another token, with a single-hop path.
+     * The `path` array must contain exactly two token addresses: [inputToken, outputToken].
+     * @param amountIn The exact amount of the input token to swap.
+     * @param amountOutMin The minimum amount of the output token that must be received (slippage protection).
+     * @param path An array containing the addresses of the tokens in the swap path (e.g., [tokenA, tokenB]).
+     * @param to The address to which the output token will be sent.
+     * @param deadline The timestamp by which the transaction must be mined.
+     * @return amounts An array containing the input amount (amounts[0]) and the output amount (amounts[1]).
      */
     function swapExactTokensForTokens(
         uint256 amountIn,
@@ -434,103 +580,146 @@ function addLiquidity(
         address to,
         uint256 deadline
     ) external nonReentrant returns (uint256[] memory amounts) {
-        require(block.timestamp <= deadline, "SimpleSwap: Transaccion expirada");
-        require(path.length == 2, "SimpleSwap: Solo se permite 1 hop (ruta de 2 tokens)");
-        require(to != address(0), "SimpleSwap: Direccion 'to' invalida");
-        require(amountIn > 0, "SimpleSwap: Cantidad de entrada debe ser > 0");
+        // Validate that the transaction has not expired.
+        require(
+            block.timestamp <= deadline,
+            "SimpleSwap: Transaction expired"
+        );
+        // Ensure the path consists of exactly two tokens (a single-hop swap).
+        require(
+            path.length == 2,
+            "SimpleSwap: Only 1 hop (2-token path) is allowed"
+        );
+        // Validate that the 'to' address is not null.
+        require(to != address(0), "SimpleSwap: Invalid 'to' address");
+        // Ensure the input amount is positive.
+        require(amountIn > 0, "SimpleSwap: Input amount must be > 0");
 
-        // Acceder directamente a path[0] y path[1] en lugar de variables locales
+        // Get the pair hash for the two tokens in the path.
         bytes32 pairHash = _getPairHash(path[0], path[1]);
+        // Get a storage reference to the pool for the specified pair.
         Pool storage pool = pools[pairHash];
 
-        // Obtener las reservas correctas para el cálculo del swap
+        // Retrieve the correct reserves for the swap, mapping path[0] to reserveIn
+        // and path[1] to reserveOut based on the pool's canonical token order.
         (uint256 reserveIn, uint256 reserveOut) = _getReservesForSwap(
-            path[0], // Directamente path[0] para tokenIn
-            path[1], // Directamente path[1] para tokenOut
+            path[0], // The input token for the swap
+            path[1], // The output token for the swap
             pool
         );
 
-        require(reserveIn > 0 && reserveOut > 0, "SimpleSwap: Pool vacio o sin liquidez");
+        // Ensure both reserves are positive, indicating an existing and liquid pool.
+        require(
+            reserveIn > 0 && reserveOut > 0,
+            "SimpleSwap: Pool empty or no liquidity"
+        );
 
-        // Calcular la cantidad de token de salida
+        // Calculate the amount of output token to be received.
         uint256 amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
-        require(amountOut >= amountOutMin, "SimpleSwap: Slippage excesivo");
+        // Apply slippage protection: ensure the calculated output amount meets the minimum.
+        require(amountOut >= amountOutMin, "SimpleSwap: Excessive slippage");
 
-        // Transferir el token de entrada del usuario al contrato del swap
+        // Transfer the input token from the user to the swap contract.
+        // User must have pre-approved the contract to spend `amountIn`.
         IERC20(path[0]).transferFrom(msg.sender, address(this), amountIn);
-        // Transferir el token de salida del contrato del swap al destinatario
+        // Transfer the calculated output token from the swap contract to the recipient.
         IERC20(path[1]).transfer(to, amountOut);
 
-        // Actualizar las reservas del pool después del swap
+        // Update the pool reserves after the swap to reflect the new balances.
         _updatePoolReserves(path[0], path[1], pool, amountIn, amountOut);
 
-        // Preparar el array de retorno con las cantidades de entrada y salida
-        amounts = new uint[](2);
+        // Emit an event to log the successful token swap.
+        emit TokensSwapped(
+            msg.sender,
+            path[0], // tokenIn
+            path[1], // tokenOut
+            amountIn,
+            amountOut,
+            block.timestamp
+        );
+
+        // Prepare the return array with the input and output amounts.
+        amounts = new uint256[](2);
         amounts[0] = amountIn;
         amounts[1] = amountOut;
 
         return amounts;
     }
 
-    // --- 4. OBTENER EL PRECIO ---
+    // --- 4. GET PRICE ---
     /**
-     * @dev Devuelve el precio actual de un token en términos de otro.
-     * El precio se escala por 1e18 para una mejor precisión.
-     * Por ejemplo, si el precio de TokenB en TokenA es 0.5, se retornará 0.5 * 1e18.
-     * @param tokenA La dirección del primer token.
-     * @param tokenB La dirección del segundo token.
-     * @return price El precio de tokenB en términos de tokenA (o viceversa si tokenA > tokenB), escalado por 1e18.
+     * @dev Returns the current price of one token in terms of another.
+     * The price is scaled by 1e18 for better precision (e.g., if TokenB's price in TokenA is 0.5, it returns 0.5 * 1e18).
+     * The price is calculated as (reserve of tokenB / reserve of tokenA) if A is token0 (the lower address).
+     * If B is token0, then it's (reserve of tokenA / reserve of tokenB).
+     * @param tokenA The address of the first token.
+     * @param tokenB The address of the second token.
+     * @return price The price of tokenB in terms of tokenA (or vice versa if tokenA > tokenB), scaled by 1e18.
      */
     function getPrice(address tokenA, address tokenB)
         external
         view
         returns (uint256 price)
     {
-        require(tokenA != address(0) && tokenB != address(0), "SimpleSwap: Direcciones de token invalidas");
+        // Ensure both token addresses are valid and not null.
+        require(
+            tokenA != address(0) && tokenB != address(0),
+            "SimpleSwap: Invalid token addresses"
+        );
 
+        // Get the unique pair hash and access the corresponding pool.
         bytes32 pairHash = _getPairHash(tokenA, tokenB);
         Pool storage pool = pools[pairHash];
 
-        require(pool.reserveA > 0 && pool.reserveB > 0, "SimpleSwap: Pool vacio o sin liquidez");
+        // Ensure both reserves are positive, indicating an active and liquid pool.
+        require(
+            pool.reserveA > 0 && pool.reserveB > 0,
+            "SimpleSwap: Pool empty or no liquidity"
+        );
 
-        // El precio se calcula como (reserva del token B / reserva del token A) si A es el token0.
-        // Si B es el token0, entonces es (reserva del token A / reserva del token B).
+        // Calculate the price. The canonical order (token0 < token1) affects
+        // which reserve (reserveA or reserveB) corresponds to which token.
         if (tokenA < tokenB) {
-            // tokenA es token0, tokenB es token1
-            // Price = (reserveB / reserveA)
+            // If tokenA is token0 (the lower address) and tokenB is token1,
+            // the price of TokenB in terms of TokenA is (reserveB / reserveA).
+            // Multiply by 1e18 first to maintain precision before division.
             return (pool.reserveB * 1e18) / pool.reserveA;
         } else {
-            // tokenB es token0, tokenA es token1
-            // Price = (reserveA * 1e18) / pool.reserveB;
-            // Corregido: La división se debe hacer después de la multiplicación por 1e18 para evitar pérdida de precisión.
+            // If tokenB is token0 (the lower address) and tokenA is token1,
+            // the price of TokenA in terms of TokenB is (reserveA / reserveB).
+            // Multiply by 1e18 first to maintain precision before division.
             return (pool.reserveA * 1e18) / pool.reserveB;
         }
     }
 
-    // --- 5. CALCULAR CANTIDAD A RECIBIR ---
+    // --- 5. CALCULATE AMOUNT TO RECEIVE ---
     /**
-     * @dev Calcula cuántos tokens de salida se recibirán para una cantidad dada de tokens de entrada,
-     * basado en las reservas actuales del pool. Utiliza la fórmula de producto constante
-     * (x * y = k) sin aplicar comisiones de swap.
-     * amountOut = (amountIn * reserveOut) / (reserveIn + amountIn)
-     * @param amountIn La cantidad del token de entrada.
-     * @param reserveIn La reserva del token de entrada en el pool.
-     * @param reserveOut La reserva del token de salida en el pool.
-     * @return amountOut La cantidad de tokens de salida esperada.
+     * @dev Calculates how many output tokens will be received for a given amount of input tokens,
+     * based on the current pool reserves. It uses the constant product formula (x * y = k)
+     * without applying any swap fees.
+     * The formula used is: `amountOut = (amountIn * reserveOut) / (reserveIn + amountIn)`.
+     * @param amountIn The amount of the input token.
+     * @param reserveIn The reserve of the input token in the pool.
+     * @param reserveOut The reserve of the output token in the pool.
+     * @return amountOut The expected amount of output tokens.
      */
     function getAmountOut(
         uint256 amountIn,
         uint256 reserveIn,
         uint256 reserveOut
     ) public pure returns (uint256 amountOut) {
+        // Ensure all input parameters are positive to avoid division by zero or nonsensical calculations.
         require(
             amountIn > 0 && reserveIn > 0 && reserveOut > 0,
-            "SimpleSwap: Datos invalidos para calculo de cantidad de salida"
+            "SimpleSwap: Invalid data for output amount calculation"
         );
 
-        // Fórmula de intercambio simplificada (sin comisiones)
-        // (x * y = k) => deltaY = y * deltaX / (x + deltaX)
-        // Donde x = reserveIn, y = reserveOut, deltaX = amountIn
+        // Simplified swap formula (without fees), derived from x * y = k.
+        // If we add deltaX to x, the new x' is x + deltaX.
+        // To maintain k, the new y' must be k / x' = (x * y) / (x + deltaX).
+        // The amount out (deltaY) is y - y' = y - (x * y) / (x + deltaX) = (y * (x + deltaX) - x * y) / (x + deltaX)
+        // = (x * y + deltaX * y - x * y) / (x + deltaX) = (deltaX * y) / (x + deltaX).
+        // Where x = reserveIn, y = reserveOut, deltaX = amountIn.
         amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
     }
 }

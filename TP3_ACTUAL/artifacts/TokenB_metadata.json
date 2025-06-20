@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.30+commit.73712a01"
+		"version": "0.8.27+commit.40a35a09"
 	},
 	"language": "Solidity",
 	"output": {
@@ -539,9 +539,9 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"TP3/TokenB.sol": "TokenB"
+			"TP3_ACTUAL/TokenB.sol": "TokenB"
 		},
-		"evmVersion": "prague",
+		"evmVersion": "cancun",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -601,7 +601,7 @@
 				"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF"
 			]
 		},
-		"TP3/TokenB.sol": {
+		"TP3_ACTUAL/TokenB.sol": {
 			"keccak256": "0x3d7492a42dca98f9917aa7a6cd56b13640240e60a4fd6c349b189aedad9558d8",
 			"license": "MIT",
 			"urls": [

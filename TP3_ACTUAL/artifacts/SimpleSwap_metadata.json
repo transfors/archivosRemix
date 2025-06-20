@@ -1,6 +1,6 @@
 {
 	"compiler": {
-		"version": "0.8.30+commit.73712a01"
+		"version": "0.8.27+commit.40a35a09"
 	},
 	"language": "Solidity",
 	"output": {
@@ -9,6 +9,123 @@
 				"inputs": [],
 				"name": "ReentrancyGuardReentrantCall",
 				"type": "error"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "provider",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "tokenA",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "tokenB",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amountA",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amountB",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "liquidityMinted",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					}
+				],
+				"name": "LiquidityAdded",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "provider",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amountA",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amountB",
+						"type": "uint256"
+					}
+				],
+				"name": "LiquidityRemoved",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "swapper",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "tokenIn",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "tokenOut",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amountIn",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "amountOut",
+						"type": "uint256"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					}
+				],
+				"name": "TokensSwapped",
+				"type": "event"
 			},
 			{
 				"inputs": [
@@ -130,35 +247,6 @@
 			{
 				"inputs": [
 					{
-						"internalType": "bytes32",
-						"name": "",
-						"type": "bytes32"
-					}
-				],
-				"name": "pools",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "reserveA",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "reserveB",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "totalLiquidity",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
 						"internalType": "address",
 						"name": "tokenA",
 						"type": "address"
@@ -251,7 +339,7 @@
 			}
 		],
 		"devdoc": {
-			"details": "Contrato de intercambio descentralizado básico (similar a Uniswap V2) que permite a los usuarios agregar/remover liquidez e intercambiar tokens ERC-20, obtener precios y calcular cantidades a recibir. No depende directamente del protocolo Uniswap; implementa su propia lógica de pool.",
+			"details": "Contrato de intercambio descentralizado basico (similar a Uniswap V2) que permite a los usuarios agregar/remover liquidez e intercambiar tokens ERC-20, obtener precios y calcular cantidades a recibir. No depende directamente del protocolo Uniswap; implementa su propia logica de pool.",
 			"errors": {
 				"ReentrancyGuardReentrantCall()": [
 					{
@@ -262,16 +350,16 @@
 			"kind": "dev",
 			"methods": {
 				"addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)": {
-					"details": "Permite a los usuarios agregar liquidez a un pool de tokens ERC-20. Si es la primera liquidez, se inicializa el pool. De lo contrario, se calculan las cantidades óptimas para mantener la proporción existente.",
+					"details": "Permite a los usuarios agregar liquidez a un pool de tokens ERC-20. Si es la primera liquidez, se inicializa el pool. De lo contrario, se calculan las cantidades optimas para mantener la proporcion existente.",
 					"params": {
 						"amountADesired": "La cantidad deseada de tokenA a depositar.",
-						"amountAMin": "La cantidad mínima de tokenA que debe aceptarse (protección contra slippage).",
+						"amountAMin": "La cantidad minima de tokenA que debe aceptarse (proteccion contra slippage).",
 						"amountBDesired": "La cantidad deseada de tokenB a depositar.",
-						"amountBMin": "La cantidad mínima de tokenB que debe aceptarse (protección contra slippage).",
-						"deadline": "El tiempo límite para que la transacción sea minada.",
-						"to": "La dirección a la que se le asignará la liquidez aportada.",
-						"tokenA": "La dirección del primer token a agregar.",
-						"tokenB": "La dirección del segundo token a agregar."
+						"amountBMin": "La cantidad minima de tokenB que debe aceptarse (proteccion contra slippage).",
+						"deadline": "El tiempo limite para que la transaccion sea minada.",
+						"to": "La direccion a la que se le asignara la liquidez aportada.",
+						"tokenA": "La direccion del primer token a agregar.",
+						"tokenB": "La direccion del segundo token a agregar."
 					},
 					"returns": {
 						"amountA": "La cantidad real de tokenA transferida y utilizada.",
@@ -280,7 +368,7 @@
 					}
 				},
 				"getAmountOut(uint256,uint256,uint256)": {
-					"details": "Calcula cuántos tokens de salida se recibirán para una cantidad dada de tokens de entrada, basado en las reservas actuales del pool. Utiliza la fórmula de producto constante (x * y = k) sin aplicar comisiones de swap. amountOut = (amountIn * reserveOut) / (reserveIn + amountIn)",
+					"details": "Calcula cuantos tokens de salida se recibiran para una cantidad dada de tokens de entrada, basado en las reservas actuales del pool. Utiliza la formula de producto constante (x * y = k) sin aplicar comisiones de swap. amountOut = (amountIn * reserveOut) / (reserveIn + amountIn)",
 					"params": {
 						"amountIn": "La cantidad del token de entrada.",
 						"reserveIn": "La reserva del token de entrada en el pool.",
@@ -291,25 +379,25 @@
 					}
 				},
 				"getPrice(address,address)": {
-					"details": "Devuelve el precio actual de un token en términos de otro. El precio se escala por 1e18 para una mejor precisión. Por ejemplo, si el precio de TokenB en TokenA es 0.5, se retornará 0.5 * 1e18.",
+					"details": "Devuelve el precio actual de un token en terminos de otro. El precio se escala por 1e18 para una mejor precision. Por ejemplo, si el precio de TokenB en TokenA es 0.5, se retornara 0.5 * 1e18.",
 					"params": {
-						"tokenA": "La dirección del primer token.",
-						"tokenB": "La dirección del segundo token."
+						"tokenA": "La direccion del primer token.",
+						"tokenB": "La direccion del segundo token."
 					},
 					"returns": {
-						"price": "El precio de tokenB en términos de tokenA (o viceversa si tokenA > tokenB), escalado por 1e18."
+						"price": "El precio de tokenB en terminos de tokenA (o viceversa si tokenA > tokenB), escalado por 1e18."
 					}
 				},
 				"removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)": {
 					"details": "Permite a los usuarios retirar liquidez de un pool quemando sus tokens de liquidez (LP tokens). Los usuarios reciben una cantidad proporcional de los tokens subyacentes (tokenA y tokenB).",
 					"params": {
-						"amountAMin": "La cantidad mínima de tokenA que debe recibirse (protección contra slippage).",
-						"amountBMin": "La cantidad mínima de tokenB que debe recibirse (protección contra slippage).",
-						"deadline": "El tiempo límite para que la transacción sea minada.",
+						"amountAMin": "La cantidad minima de tokenA que debe recibirse (proteccion contra slippage).",
+						"amountBMin": "La cantidad minima de tokenB que debe recibirse (proteccion contra slippage).",
+						"deadline": "El tiempo limite para que la transaccion sea minada.",
 						"liquidity": "La cantidad de tokens de liquidez (LP tokens) a quemar.",
-						"to": "La dirección a la que se enviarán los tokens A y B retirados.",
-						"tokenA": "La dirección del primer token en el par.",
-						"tokenB": "La dirección del segundo token en el par."
+						"to": "La direccion a la que se enviaran los tokens A y B retirados.",
+						"tokenA": "La direccion del primer token en el par.",
+						"tokenB": "La direccion del segundo token en el par."
 					},
 					"returns": {
 						"amountA": "La cantidad real de tokenA retirada.",
@@ -320,10 +408,10 @@
 					"details": "Permite a los usuarios intercambiar una cantidad exacta de un token (amountIn) por otro token, con una ruta de un solo salto. El `path` debe contener exactamente dos direcciones: [tokenEntrada, tokenSalida].",
 					"params": {
 						"amountIn": "La cantidad exacta del token de entrada a intercambiar.",
-						"amountOutMin": "La cantidad mínima del token de salida que debe recibirse (protección contra slippage).",
-						"deadline": "El tiempo límite para que la transacción sea minada.",
+						"amountOutMin": "La cantidad minima del token de salida que debe recibirse (proteccion contra slippage).",
+						"deadline": "El tiempo limite para que la transaccion sea minada.",
 						"path": "Un array con las direcciones de los tokens en la ruta de intercambio (ej: [tokenA, tokenB]).",
-						"to": "La dirección a la que se enviará el token de salida."
+						"to": "La direccion a la que se enviara el token de salida."
 					},
 					"returns": {
 						"amounts": "Un array con la cantidad de entrada (amounts[0]) y la cantidad de salida (amounts[1])."
@@ -343,7 +431,7 @@
 		"compilationTarget": {
 			"TP3_ACTUAL/SimpleSwap.sol": "SimpleSwap"
 		},
-		"evmVersion": "prague",
+		"evmVersion": "cancun",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
@@ -396,11 +484,11 @@
 			]
 		},
 		"TP3_ACTUAL/SimpleSwap.sol": {
-			"keccak256": "0x5901db96e355283ec3ea9577b8197a4285a8f5c516df955e5db02eeeafe23928",
+			"keccak256": "0x825fdc3222dceb214624d3261c7981deaf6166b443382e73dfaf40a158cfb706",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://a16bf4924ef95b13022c3a89a1516f21238e8b51e722797f6425e9b40cc65176",
-				"dweb:/ipfs/QmStNcKcSpsgtNqffQGFPq68kvSswt2GCUtmqA3YNkEXXa"
+				"bzz-raw://ab14007f3d06f6b4e5e61faf483e01a5da31695e479280ad5b79936b539cab0d",
+				"dweb:/ipfs/QmUgSq3jjezUFFma98op4hEhWxP9J1vxPQdxi6gAtigG1b"
 			]
 		}
 	},
