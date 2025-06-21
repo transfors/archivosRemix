@@ -1,0 +1,281 @@
+{
+	"compiler": {
+		"version": "0.8.27+commit.40a35a09"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_simpleSwapAddress",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "token",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "spender",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "approveTokenForSwap",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "simpleSwap",
+				"outputs": [
+					{
+						"internalType": "contract ISimpleSwap",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "tokenA",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "tokenB",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountADesired",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountBDesired",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountAMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountBMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
+					}
+				],
+				"name": "testAddLiquidity",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "amountA_",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountB_",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "liquidity_",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "tokenA",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "tokenB",
+						"type": "address"
+					}
+				],
+				"name": "testGetPrice",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "price_",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "amountIn",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amountOutMin",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address[]",
+						"name": "path",
+						"type": "address[]"
+					},
+					{
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
+					}
+				],
+				"name": "testSwapExactTokensForTokens",
+				"outputs": [
+					{
+						"internalType": "uint256[]",
+						"name": "amounts_",
+						"type": "uint256[]"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"stateMutability": "payable",
+				"type": "receive"
+			}
+		],
+		"devdoc": {
+			"details": "Un contrato de ejemplo para interactuar y \"verificar\" el contrato SimpleSwap. Este contrato no tiene la intención de ser de producción, sino una herramienta de prueba/interacción.",
+			"kind": "dev",
+			"methods": {
+				"approveTokenForSwap(address,address,uint256)": {
+					"details": "Permite a este contrato Tester simular una aprobación de tokens para el contrato SimpleSwap. En un escenario real, los usuarios tendrían que aprobar directamente a SimpleSwap. Esta función es útil para pruebas donde este contrato Tester actúa en nombre de un usuario.",
+					"params": {
+						"amount": "La cantidad máxima de tokens que el spender puede gastar.",
+						"spender": "La dirección que se autoriza a gastar (será la dirección de SimpleSwap).",
+						"token": "La dirección del token ERC-20 a aprobar."
+					},
+					"returns": {
+						"_0": "bool Verdadero si la aprobación fue exitosa."
+					}
+				},
+				"testAddLiquidity(address,address,uint256,uint256,uint256,uint256,uint256)": {
+					"details": "Llama a la función `addLiquidity` del contrato SimpleSwap. Este contrato Tester actuará como el proveedor de liquidez. Asegúrate de que este contrato (SimpleSwapTester) tenga los tokens aprobados para que SimpleSwap pueda transferirlos.",
+					"params": {
+						"amountADesired": "La cantidad deseada de tokenA a depositar.",
+						"amountAMin": "La cantidad mínima de tokenA que debe aceptarse (protección de deslizamiento).",
+						"amountBDesired": "La cantidad deseada de tokenB a depositar.",
+						"amountBMin": "La cantidad mínima de tokenB que debe aceptarse (protección de deslizamiento).",
+						"deadline": "El timestamp límite para la transacción.",
+						"tokenA": "La dirección del primer token a añadir.",
+						"tokenB": "La dirección del segundo token a añadir."
+					},
+					"returns": {
+						"amountA_": "Actual cantidad de tokenA transferida y usada.",
+						"amountB_": "Actual cantidad de tokenB transferida y usada.",
+						"liquidity_": "Cantidad de tokens de liquidez internos acuñados."
+					}
+				},
+				"testGetPrice(address,address)": {
+					"details": "Llama a la función `getPrice` del contrato SimpleSwap.",
+					"params": {
+						"tokenA": "La dirección del primer token.",
+						"tokenB": "La dirección del segundo token."
+					},
+					"returns": {
+						"price_": "El precio de tokenB en términos de tokenA (o viceversa), escalado por 1e18."
+					}
+				},
+				"testSwapExactTokensForTokens(uint256,uint256,address[],uint256)": {
+					"details": "Llama a la función `swapExactTokensForTokens` del contrato SimpleSwap. Este contrato Tester actuará como el swapper. Asegúrate de que este contrato (SimpleSwapTester) tenga los tokens de entrada aprobados para que SimpleSwap pueda transferirlos.",
+					"params": {
+						"amountIn": "La cantidad exacta del token de entrada a intercambiar.",
+						"amountOutMin": "La cantidad mínima del token de salida que debe recibirse.",
+						"deadline": "El timestamp límite para la transacción.",
+						"path": "Un array con las direcciones de los tokens en la ruta de intercambio ([tokenIn, tokenOut])."
+					},
+					"returns": {
+						"amounts_": "Un array con la cantidad de entrada y la cantidad de salida."
+					}
+				}
+			},
+			"title": "SimpleSwapTester",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"MODULO3_TP3/Verify.sol": "SimpleSwapTester"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+			"keccak256": "0xe06a3f08a987af6ad2e1c1e774405d4fe08f1694b67517438b467cecf0da0ef7",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://df6f0c459663c9858b6cba2cda1d14a7d05a985bed6d2de72bd8e78c25ee79db",
+				"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9"
+			]
+		},
+		"MODULO3_TP3/Verify.sol": {
+			"keccak256": "0x13f8b578d3ca119b57a883e6e33817315f557775db81dbef8404fbb7f5c2455e",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://d779f9c097a1733bbf79b330e4391cd2809da7412756acbc1148843b173bef58",
+				"dweb:/ipfs/QmPvagGat5zME57VQMPKwUjfwotrhApG6H59QSKGxFSqsL"
+			]
+		}
+	},
+	"version": 1
+}
