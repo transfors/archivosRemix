@@ -339,7 +339,6 @@
 			}
 		],
 		"devdoc": {
-			"details": "A basic decentralized exchange contract (similar to Uniswap V2) that allows users to add/remove liquidity, swap ERC-20 tokens, get prices, and calculate amounts to receive. It does not directly depend on the Uniswap protocol; it implements its own pool logic.",
 			"errors": {
 				"ReentrancyGuardReentrantCall()": [
 					{
@@ -349,125 +348,145 @@
 			},
 			"events": {
 				"LiquidityAdded(address,address,address,uint256,uint256,uint256,uint256)": {
-					"details": "Emitted when liquidity is successfully added to a pool.",
 					"params": {
-						"amountA": "The actual amount of tokenA transferred to the pool.",
-						"amountB": "The actual amount of tokenB transferred to the pool.",
-						"liquidityMinted": "The amount of internal liquidity tokens minted for the provider.",
-						"provider": "The address of the liquidity provider.",
-						"timestamp": "The timestamp when the liquidity was added.",
-						"tokenA": "The address of the first token in the pair.",
-						"tokenB": "The address of the second token in the pair."
+						"amountA": "The amount of tokenA added",
+						"amountB": "The amount of tokenB added",
+						"liquidityMinted": "The amount of liquidity tokens minted to the provider",
+						"provider": "The address adding liquidity",
+						"timestamp": "The timestamp when liquidity was added",
+						"tokenA": "The first token in the pool",
+						"tokenB": "The second token in the pool"
 					}
 				},
 				"LiquidityRemoved(address,uint256,uint256)": {
-					"details": "Emitted when liquidity is successfully removed from a pool.",
 					"params": {
-						"amountA": "The amount of tokenA withdrawn from the pool.",
-						"amountB": "The amount of tokenB withdrawn from the pool.",
-						"provider": "The address of the liquidity provider who removed liquidity."
+						"amountA": "The amount of tokenA withdrawn",
+						"amountB": "The amount of tokenB withdrawn",
+						"provider": "The address removing liquidity"
 					}
 				},
 				"TokensSwapped(address,address,address,uint256,uint256,uint256)": {
-					"details": "Emitted when tokens are successfully swapped in a pool.",
 					"params": {
-						"amountIn": "The amount of `tokenIn` that was swapped.",
-						"amountOut": "The amount of `tokenOut` that was received.",
-						"swapper": "The address of the user who performed the swap.",
-						"timestamp": "The timestamp when the swap occurred.",
-						"tokenIn": "The address of the token that was sent into the pool.",
-						"tokenOut": "The address of the token that was received from the pool."
+						"amountIn": "The amount of tokenIn sent",
+						"amountOut": "The amount of tokenOut received",
+						"swapper": "The address performing the swap",
+						"timestamp": "The timestamp when the swap occurred",
+						"tokenIn": "The token address sent to the contract",
+						"tokenOut": "The token address received from the contract"
 					}
 				}
 			},
 			"kind": "dev",
 			"methods": {
 				"addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)": {
-					"details": "Allows users to add liquidity to an ERC-20 token pair pool. If it's the first liquidity provision, the pool is initialized. Otherwise, optimal amounts are calculated to maintain the existing ratio.",
 					"params": {
-						"amountADesired": "The desired amount of tokenA to deposit.",
-						"amountAMin": "The minimum amount of tokenA that must be accepted (slippage protection).",
-						"amountBDesired": "The desired amount of tokenB to deposit.",
-						"amountBMin": "The minimum amount of tokenB that must be accepted (slippage protection).",
-						"deadline": "The timestamp by which the transaction must be mined.",
-						"to": "The address to which the minted liquidity tokens will be assigned.",
-						"tokenA": "The address of the first token to add.",
-						"tokenB": "The address of the second token to add."
+						"amountADesired": "Max amount of tokenA to add",
+						"amountAMin": "Min acceptable amount of tokenA (slippage protection)",
+						"amountBDesired": "Max amount of tokenB to add",
+						"amountBMin": "Min acceptable amount of tokenB (slippage protection)",
+						"deadline": "Timestamp after which transaction is invalid",
+						"to": "Address to receive liquidity tokens (LP tokens)",
+						"tokenA": "Address of the first token",
+						"tokenB": "Address of the second token"
 					},
 					"returns": {
-						"amountA": "The actual amount of tokenA transferred and used.",
-						"amountB": "The actual amount of tokenB transferred and used.",
-						"liquidity": "The amount of internal liquidity tokens minted for the user."
+						"amountA": "Actual amount of tokenA added",
+						"amountB": "Actual amount of tokenB added",
+						"liquidity": "Amount of liquidity tokens minted"
 					}
 				},
 				"getAmountOut(uint256,uint256,uint256)": {
-					"details": "Calculates how many output tokens will be received for a given amount of input tokens, based on the current pool reserves. It uses the constant product formula (x * y = k) without applying any swap fees. The formula used is: `amountOut = (amountIn * reserveOut) / (reserveIn + amountIn)`.",
 					"params": {
-						"amountIn": "The amount of the input token.",
-						"reserveIn": "The reserve of the input token in the pool.",
-						"reserveOut": "The reserve of the output token in the pool."
+						"amountIn": "Amount of input token being swapped",
+						"reserveIn": "Reserve of input token in pool",
+						"reserveOut": "Reserve of output token in pool"
 					},
 					"returns": {
-						"amountOut": "The expected amount of output tokens."
+						"amountOut": "The calculated output amount of token"
 					}
 				},
 				"getPrice(address,address)": {
-					"details": "Returns the current price of one token in terms of another. The price is scaled by 1e18 for better precision (e.g., if TokenB's price in TokenA is 0.5, it returns 0.5 * 1e18). The price is calculated as (reserve of tokenB / reserve of tokenA) if A is token0 (the lower address). If B is token0, then it's (reserve of tokenA / reserve of tokenB).",
 					"params": {
-						"tokenA": "The address of the first token.",
-						"tokenB": "The address of the second token."
+						"tokenA": "The first token address",
+						"tokenB": "The second token address"
 					},
 					"returns": {
-						"price": "The price of tokenB in terms of tokenA (or vice versa if tokenA > tokenB), scaled by 1e18."
+						"price": "The price of one unit of tokenA in tokenB, scaled by 1e18"
 					}
 				},
 				"removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)": {
-					"details": "Allows users to withdraw liquidity from a token pool by burning their liquidity tokens (LP tokens). Users receive a proportional amount of the underlying tokens (tokenA and tokenB) based on their burned liquidity.",
 					"params": {
-						"amountAMin": "The minimum amount of tokenA that must be received (slippage protection).",
-						"amountBMin": "The minimum amount of tokenB that must be received (slippage protection).",
-						"deadline": "The timestamp by which the transaction must be mined.",
-						"liquidity": "The amount of liquidity tokens (LP tokens) to burn.",
-						"to": "The address to which the withdrawn tokenA and tokenB will be sent.",
-						"tokenA": "The address of the first token in the pair.",
-						"tokenB": "The address of the second token in the pair."
+						"amountAMin": "Minimum amount of tokenA to receive (slippage protection)",
+						"amountBMin": "Minimum amount of tokenB to receive (slippage protection)",
+						"deadline": "Timestamp after which transaction is invalid",
+						"liquidity": "Amount of liquidity tokens to burn",
+						"to": "Address to receive withdrawn tokens",
+						"tokenA": "Address of the first token",
+						"tokenB": "Address of the second token"
 					},
 					"returns": {
-						"amountA": "The actual amount of tokenA withdrawn.",
-						"amountB": "The actual amount of tokenB withdrawn."
+						"amountA": "Amount of tokenA withdrawn",
+						"amountB": "Amount of tokenB withdrawn"
 					}
 				},
 				"swapExactTokensForTokens(uint256,uint256,address[],address,uint256)": {
-					"details": "Allows users to swap an exact amount of an input token (`amountIn`) for another token, with a single-hop path. The `path` array must contain exactly two token addresses: [inputToken, outputToken].",
 					"params": {
-						"amountIn": "The exact amount of the input token to swap.",
-						"amountOutMin": "The minimum amount of the output token that must be received (slippage protection).",
-						"deadline": "The timestamp by which the transaction must be mined.",
-						"path": "An array containing the addresses of the tokens in the swap path (e.g., [tokenA, tokenB]).",
-						"to": "The address to which the output token will be sent."
+						"amountIn": "Exact amount of input tokens to swap",
+						"amountOutMin": "Minimum acceptable amount of output tokens (slippage protection)",
+						"deadline": "Timestamp after which transaction is invalid",
+						"path": "Array of token addresses [tokenIn, tokenOut]",
+						"to": "Address to receive output tokens"
 					},
 					"returns": {
-						"amounts": "An array containing the input amount (amounts[0]) and the output amount (amounts[1])."
+						"amounts": "Array with amounts [amountIn, amountOut]"
 					}
 				}
 			},
 			"stateVariables": {
 				"pools": {
-					"details": "Mapping from a unique pair hash (bytes32) to its corresponding Pool struct. The pair hash ensures that each token pair has a single unique pool, regardless of the order in which tokens are provided (TokenA, TokenB or TokenB, TokenA)."
+					"details": "Mapping from pair hash to Pool struct"
 				}
 			},
-			"title": "SimpleSwap",
+			"title": "SimpleSwap - A basic ERC20 token swap and liquidity pool contract",
 			"version": 1
 		},
 		"userdoc": {
+			"events": {
+				"LiquidityAdded(address,address,address,uint256,uint256,uint256,uint256)": {
+					"notice": "Emitted when liquidity is added to a pool"
+				},
+				"LiquidityRemoved(address,uint256,uint256)": {
+					"notice": "Emitted when liquidity is removed from a pool"
+				},
+				"TokensSwapped(address,address,address,uint256,uint256,uint256)": {
+					"notice": "Emitted when tokens are swapped"
+				}
+			},
 			"kind": "user",
-			"methods": {},
+			"methods": {
+				"addLiquidity(address,address,uint256,uint256,uint256,uint256,address,uint256)": {
+					"notice": "Adds liquidity to a token pair pool"
+				},
+				"getAmountOut(uint256,uint256,uint256)": {
+					"notice": "Calculates the output token amount given an input amount and reserves using Uniswap's formula with 0.3% fee"
+				},
+				"getPrice(address,address)": {
+					"notice": "Returns the price of tokenA in terms of tokenB (scaled by 1e18)"
+				},
+				"removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)": {
+					"notice": "Removes liquidity from a token pair pool"
+				},
+				"swapExactTokensForTokens(uint256,uint256,address[],address,uint256)": {
+					"notice": "Swaps an exact amount of input tokens for as many output tokens as possible (1 hop only)"
+				}
+			},
+			"notice": "Enables users to add/remove liquidity and swap tokens in a two-token pool",
 			"version": 1
 		}
 	},
 	"settings": {
 		"compilationTarget": {
-			"MODULO3_TP3/SimpleSwap.sol": "SimpleSwap"
+			"z-MODULO3_TP3/SimpleSwap.sol": "SimpleSwap"
 		},
 		"evmVersion": "cancun",
 		"libraries": {},
@@ -521,12 +540,12 @@
 				"dweb:/ipfs/QmPFKL2r9CBsMwmUqqdcFPfHZB2qcs9g1HDrPxzWSxomvy"
 			]
 		},
-		"MODULO3_TP3/SimpleSwap.sol": {
-			"keccak256": "0x20132acfed92a8c4824a6e91f62da7a3398e0d5f6c0f24773aa478c70b8af82d",
+		"z-MODULO3_TP3/SimpleSwap.sol": {
+			"keccak256": "0xa436bcf34293d31230d037964fc0609189b9f4f341f226cc6af791b8487a7aa2",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://a15dd1568e45999ab143a26a39163e6405389f9085a8ce64efbb3abb80d4edd4",
-				"dweb:/ipfs/QmafmA5SGFPpeswodTaHZBpMWdK8RbNvZCcC9a1zEKbG4W"
+				"bzz-raw://b677327138299fe1ca8ada11779b3a7108ad4bfd9fc6b4c868bfa12fcc812f85",
+				"dweb:/ipfs/QmWMy5ynKTtKPFAFuQrGbRCMpMsNLBDhsrkwotBxytj6ZR"
 			]
 		}
 	},
